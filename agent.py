@@ -53,6 +53,7 @@ def select_tables(state: AgentState) -> dict:
     )
 
     question = state["question"]
+    chat_history = state.get("messages", [])
     system_prompt = """You are an AI Analyst at ACB Bank. Your task is to read the user's question and determine which database tables are required to generate the SQL query.
                      Below is the list of available tables and their brief descriptions
                         `customers`: Thông tin khách hàng cá nhân và doanh nghiệp
@@ -62,14 +63,20 @@ def select_tables(state: AgentState) -> dict:
                         `loans`: Hợp đồng vay của khách hàng"""
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
+        MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{question}")
     ])
-    chain = prompt | model.with_structured_output(TableSelection)
-    response = chain.invoke({"question": question})
-    return {"selected_tables": response.tables}
-
-
-def inject_schema(state: AgentState) -> str:
+    try:
+        chain = prompt | model.with_structured_output(TableSelection)
+        response = chain.invoke({
+            "question": question,
+            "chat_history": chat_history
+        })
+        return {"selected_tables": response.tables}
+    except Exception as e:
+        return f"Cannot handle this request. Please try again. Error: {e}"
+    
+def inject_schema(state: AgentState) -> dict:
     selected_tables = state["selected_tables"]
     schema_context  = []
 
@@ -236,7 +243,7 @@ def validate_sql(state: AgentState) -> list[dict]:
         print (f"error: {e}")
         return {
             "validation_error": error_msg ,
-            "retry_count": 0, # reset 
+            "retry_count": retry_count, 
             "sql": sql
         }
     finally:
