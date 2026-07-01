@@ -1,0 +1,77 @@
+{
+  "description": "Few-shot examples cho Text-to-SQL agent — mỗi entry là cặp (câu hỏi, SQL đúng). Intern sẽ dùng đây làm example bank cho dynamic few-shot selection.",
+  "examples": [
+    {
+      "id": "ex_001",
+      "category": "simple_select",
+      "question": "Liệt kê tất cả khách hàng cá nhân ở Hồ Chí Minh",
+      "sql": "SELECT customer_id, full_name, segment, created_at FROM customers WHERE customer_type = 'individual' AND city = 'Hồ Chí Minh' ORDER BY created_at DESC;"
+    },
+    {
+      "id": "ex_002",
+      "category": "aggregate",
+      "question": "Tổng số dư tài khoản tiết kiệm của tất cả khách hàng là bao nhiêu?",
+      "sql": "SELECT SUM(balance) AS total_savings_balance FROM accounts WHERE account_type = 'savings' AND status = 'active';"
+    },
+    {
+      "id": "ex_003",
+      "category": "aggregate",
+      "question": "Có bao nhiêu giao dịch completed trong tháng 6 năm 2024?",
+      "sql": "SELECT COUNT(*) AS completed_txn_count FROM transactions WHERE status = 'completed' AND transacted_at >= '2024-06-01' AND transacted_at < '2024-07-01';"
+    },
+    {
+      "id": "ex_004",
+      "category": "join",
+      "question": "Danh sách tên khách hàng có khoản vay đang overdue",
+      "sql": "SELECT c.customer_id, c.full_name, c.city, l.loan_id, l.outstanding FROM customers c JOIN loans l ON c.customer_id = l.customer_id WHERE l.loan_status = 'overdue' ORDER BY l.outstanding DESC;"
+    },
+    {
+      "id": "ex_005",
+      "category": "join_aggregate",
+      "question": "Tổng doanh thu (tiền vào) theo kênh giao dịch trong năm 2024",
+      "sql": "SELECT channel, SUM(amount) AS total_credit, COUNT(*) AS txn_count FROM transactions WHERE direction = 'credit' AND status = 'completed' AND transacted_at >= '2024-01-01' AND transacted_at < '2025-01-01' GROUP BY channel ORDER BY total_credit DESC;"
+    },
+    {
+      "id": "ex_006",
+      "category": "join_aggregate",
+      "question": "Top 5 khách hàng có tổng giao dịch nhiều nhất",
+      "sql": "SELECT c.customer_id, c.full_name, COUNT(t.transaction_id) AS txn_count, SUM(t.amount) AS total_amount FROM customers c JOIN accounts a ON c.customer_id = a.customer_id JOIN transactions t ON a.account_id = t.account_id WHERE t.status = 'completed' GROUP BY c.customer_id, c.full_name ORDER BY txn_count DESC LIMIT 5;"
+    },
+    {
+      "id": "ex_007",
+      "category": "group_by",
+      "question": "Số lượng khách hàng theo từng phân khúc",
+      "sql": "SELECT segment, COUNT(*) AS customer_count FROM customers WHERE segment IS NOT NULL GROUP BY segment ORDER BY customer_count DESC;"
+    },
+    {
+      "id": "ex_008",
+      "category": "group_by_date",
+      "question": "Tổng tiền giao dịch theo từng tháng trong năm 2024",
+      "sql": "SELECT strftime('%Y-%m', transacted_at) AS month, SUM(CASE WHEN direction='credit' THEN amount ELSE 0 END) AS total_credit, SUM(CASE WHEN direction='debit' THEN amount ELSE 0 END) AS total_debit, COUNT(*) AS txn_count FROM transactions WHERE status = 'completed' AND transacted_at >= '2024-01-01' GROUP BY strftime('%Y-%m', transacted_at) ORDER BY month;"
+    },
+    {
+      "id": "ex_009",
+      "category": "filter_complex",
+      "question": "Tài khoản nào có số dư trên 100 triệu và đang active?",
+      "sql": "SELECT a.account_id, a.account_type, a.balance, c.full_name, c.segment FROM accounts a JOIN customers c ON a.customer_id = c.customer_id WHERE a.balance > 100000000 AND a.status = 'active' ORDER BY a.balance DESC;"
+    },
+    {
+      "id": "ex_010",
+      "category": "subquery",
+      "question": "Khách hàng nào có nhiều hơn 1 khoản vay đang active?",
+      "sql": "SELECT c.customer_id, c.full_name, COUNT(l.loan_id) AS active_loan_count FROM customers c JOIN loans l ON c.customer_id = l.customer_id WHERE l.loan_status = 'active' GROUP BY c.customer_id, c.full_name HAVING COUNT(l.loan_id) > 1;"
+    },
+    {
+      "id": "ex_011",
+      "category": "join_aggregate",
+      "question": "Tổng dư nợ theo từng sản phẩm vay",
+      "sql": "SELECT lp.product_name, lp.loan_type, COUNT(l.loan_id) AS loan_count, SUM(l.outstanding) AS total_outstanding, AVG(l.outstanding) AS avg_outstanding FROM loan_products lp JOIN loans l ON lp.product_id = l.product_id WHERE l.loan_status = 'active' GROUP BY lp.product_id, lp.product_name, lp.loan_type ORDER BY total_outstanding DESC;"
+    },
+    {
+      "id": "ex_012",
+      "category": "case_when",
+      "question": "Phân loại giao dịch theo quy mô: nhỏ < 1 triệu, trung bình 1-10 triệu, lớn > 10 triệu",
+      "sql": "SELECT CASE WHEN amount < 1000000 THEN 'nhỏ' WHEN amount BETWEEN 1000000 AND 10000000 THEN 'trung bình' ELSE 'lớn' END AS size_category, COUNT(*) AS count, SUM(amount) AS total_amount FROM transactions WHERE status = 'completed' GROUP BY size_category ORDER BY total_amount DESC;"
+    }
+  ]
+}

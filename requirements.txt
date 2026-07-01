@@ -1,0 +1,16 @@
+langgraph
+langgraph-prebuilt
+langgraph-sdk
+
+langchain
+langchain-core
+langchain-community
+langchain-openai
+
+langchain-openrouter
+langsmith
+
+pydantic
+python-dotenv
+chainlit
+scikit-learn

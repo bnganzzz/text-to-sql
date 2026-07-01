@@ -1,0 +1,96 @@
+{
+  "description": "Bộ 15 câu hỏi kiểm tra — intern dùng để đánh giá accuracy của agent sau khi build xong.",
+  "note": "expected_sql là một trong nhiều cách viết đúng. SQL khác nhau nhưng cho kết quả giống nhau cũng được chấp nhận.",
+  "questions": [
+    {
+      "id": "q01", "difficulty": "easy",
+      "question": "Có tổng cộng bao nhiêu khách hàng trong hệ thống?",
+      "expected_tables": ["customers"],
+      "expected_sql": "SELECT COUNT(*) FROM customers;"
+    },
+    {
+      "id": "q02", "difficulty": "easy",
+      "question": "Liệt kê tất cả sản phẩm vay đang còn cung cấp (is_active = 1)",
+      "expected_tables": ["loan_products"],
+      "expected_sql": "SELECT product_id, product_name, loan_type, interest_rate FROM loan_products WHERE is_active = 1;"
+    },
+    {
+      "id": "q03", "difficulty": "easy",
+      "question": "Tổng số giao dịch bị failed là bao nhiêu?",
+      "expected_tables": ["transactions"],
+      "expected_sql": "SELECT COUNT(*) AS failed_count FROM transactions WHERE status = 'failed';"
+    },
+    {
+      "id": "q04", "difficulty": "medium",
+      "question": "Top 3 thành phố có nhiều khách hàng nhất",
+      "expected_tables": ["customers"],
+      "expected_sql": "SELECT city, COUNT(*) AS customer_count FROM customers WHERE city IS NOT NULL GROUP BY city ORDER BY customer_count DESC LIMIT 3;"
+    },
+    {
+      "id": "q05", "difficulty": "medium",
+      "question": "Tổng tiền nộp vào (deposit) qua kênh mobile trong quý 3 năm 2024",
+      "expected_tables": ["transactions"],
+      "expected_sql": "SELECT SUM(amount) AS total_deposit FROM transactions WHERE transaction_type = 'deposit' AND channel = 'mobile' AND status = 'completed' AND transacted_at >= '2024-07-01' AND transacted_at < '2024-10-01';"
+    },
+    {
+      "id": "q06", "difficulty": "medium",
+      "question": "Khách hàng nào có số dư tài khoản checking cao nhất? Cho biết tên và số dư.",
+      "expected_tables": ["customers", "accounts"],
+      "expected_sql": "SELECT c.full_name, a.balance FROM customers c JOIN accounts a ON c.customer_id = a.customer_id WHERE a.account_type = 'checking' AND a.status = 'active' ORDER BY a.balance DESC LIMIT 1;"
+    },
+    {
+      "id": "q07", "difficulty": "medium",
+      "question": "Số lượng và tổng dư nợ của các khoản vay theo từng trạng thái",
+      "expected_tables": ["loans"],
+      "expected_sql": "SELECT loan_status, COUNT(*) AS count, SUM(outstanding) AS total_outstanding FROM loans GROUP BY loan_status ORDER BY total_outstanding DESC;"
+    },
+    {
+      "id": "q08", "difficulty": "medium",
+      "question": "Tháng nào có tổng giao dịch lớn nhất trong năm 2024?",
+      "expected_tables": ["transactions"],
+      "expected_sql": "SELECT strftime('%Y-%m', transacted_at) AS month, SUM(amount) AS total FROM transactions WHERE status = 'completed' AND transacted_at >= '2024-01-01' AND transacted_at < '2025-01-01' GROUP BY month ORDER BY total DESC LIMIT 1;"
+    },
+    {
+      "id": "q09", "difficulty": "medium",
+      "question": "Danh sách khách hàng premium có khoản vay đang active",
+      "expected_tables": ["customers", "loans"],
+      "expected_sql": "SELECT c.customer_id, c.full_name, c.city, l.loan_id, l.principal, l.outstanding FROM customers c JOIN loans l ON c.customer_id = l.customer_id WHERE c.segment = 'premium' AND l.loan_status = 'active' ORDER BY l.outstanding DESC;"
+    },
+    {
+      "id": "q10", "difficulty": "medium",
+      "question": "Lãi suất trung bình của các sản phẩm vay theo từng loại (loan_type)",
+      "expected_tables": ["loan_products"],
+      "expected_sql": "SELECT loan_type, AVG(interest_rate) AS avg_rate, COUNT(*) AS product_count FROM loan_products WHERE is_active = 1 GROUP BY loan_type ORDER BY avg_rate;"
+    },
+    {
+      "id": "q11", "difficulty": "hard",
+      "question": "Tổng doanh thu ròng (tiền vào trừ tiền ra) của từng khách hàng trong năm 2024, chỉ lấy top 5",
+      "expected_tables": ["customers", "accounts", "transactions"],
+      "expected_sql": "SELECT c.customer_id, c.full_name, SUM(CASE WHEN t.direction = 'credit' THEN t.amount ELSE -t.amount END) AS net_amount FROM customers c JOIN accounts a ON c.customer_id = a.customer_id JOIN transactions t ON a.account_id = t.account_id WHERE t.status = 'completed' AND t.transacted_at >= '2024-01-01' AND t.transacted_at < '2025-01-01' GROUP BY c.customer_id, c.full_name ORDER BY net_amount DESC LIMIT 5;"
+    },
+    {
+      "id": "q12", "difficulty": "hard",
+      "question": "Khách hàng nào có tổng dư nợ vay lớn hơn tổng số dư tài khoản của họ? (rủi ro thanh khoản)",
+      "expected_tables": ["customers", "accounts", "loans"],
+      "expected_sql": "SELECT c.customer_id, c.full_name, SUM(DISTINCT a.balance) AS total_balance, SUM(l.outstanding) AS total_outstanding FROM customers c JOIN accounts a ON c.customer_id = a.customer_id JOIN loans l ON c.customer_id = l.customer_id WHERE a.status = 'active' AND l.loan_status = 'active' GROUP BY c.customer_id, c.full_name HAVING SUM(l.outstanding) > SUM(DISTINCT a.balance) ORDER BY (SUM(l.outstanding) - SUM(DISTINCT a.balance)) DESC;"
+    },
+    {
+      "id": "q13", "difficulty": "hard",
+      "question": "Tỷ lệ giao dịch thành công (completed) theo từng kênh, sắp xếp từ cao đến thấp",
+      "expected_tables": ["transactions"],
+      "expected_sql": "SELECT channel, COUNT(*) AS total, SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed, ROUND(100.0 * SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) / COUNT(*), 2) AS success_rate_pct FROM transactions WHERE channel IS NOT NULL GROUP BY channel ORDER BY success_rate_pct DESC;"
+    },
+    {
+      "id": "q14", "difficulty": "hard",
+      "question": "So sánh số lượng và tổng tiền giao dịch giữa khách hàng cá nhân và doanh nghiệp trong năm 2024",
+      "expected_tables": ["customers", "accounts", "transactions"],
+      "expected_sql": "SELECT c.customer_type, COUNT(DISTINCT c.customer_id) AS customer_count, COUNT(t.transaction_id) AS txn_count, SUM(t.amount) AS total_amount, AVG(t.amount) AS avg_amount FROM customers c JOIN accounts a ON c.customer_id = a.customer_id JOIN transactions t ON a.account_id = t.account_id WHERE t.status = 'completed' AND t.transacted_at >= '2024-01-01' GROUP BY c.customer_type;"
+    },
+    {
+      "id": "q15", "difficulty": "hard",
+      "question": "Sản phẩm vay nào có tổng dư nợ cao nhất và lãi suất của nó là bao nhiêu?",
+      "expected_tables": ["loans", "loan_products"],
+      "expected_sql": "SELECT lp.product_name, lp.interest_rate, lp.loan_type, SUM(l.outstanding) AS total_outstanding, COUNT(l.loan_id) AS loan_count FROM loans l JOIN loan_products lp ON l.product_id = lp.product_id WHERE l.loan_status = 'active' GROUP BY lp.product_id, lp.product_name, lp.interest_rate, lp.loan_type ORDER BY total_outstanding DESC LIMIT 1;"
+    }
+  ]
+}

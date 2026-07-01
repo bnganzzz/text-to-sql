@@ -1,0 +1,88 @@
+{
+  "database": "acb_mock",
+  "dialect": "sqlite",
+  "description": "Mock database ngân hàng ACB — dùng cho bài tập Capstone LangGraph",
+  "tables": {
+    "customers": {
+      "description": "Thông tin khách hàng cá nhân và doanh nghiệp",
+      "columns": {
+        "customer_id":   { "type": "TEXT", "pk": true,  "description": "Mã khách hàng, format: CUS_XXXXXX" },
+        "full_name":     { "type": "TEXT", "nullable": false, "description": "Họ và tên đầy đủ" },
+        "customer_type": { "type": "TEXT", "nullable": false, "description": "Loại KH: individual | corporate" },
+        "segment":       { "type": "TEXT", "nullable": true,  "description": "Phân khúc: mass | premium | private" },
+        "city":          { "type": "TEXT", "nullable": true,  "description": "Thành phố cư trú / đăng ký" },
+        "created_at":    { "type": "TIMESTAMP", "nullable": false, "description": "Ngày mở tài khoản" }
+      },
+      "sample_rows": 3
+    },
+    "accounts": {
+      "description": "Tài khoản ngân hàng của khách hàng",
+      "columns": {
+        "account_id":     { "type": "TEXT", "pk": true,  "description": "Số tài khoản, format: ACC_XXXXXXXXXX" },
+        "customer_id":    { "type": "TEXT", "fk": "customers.customer_id", "description": "Mã khách hàng sở hữu" },
+        "account_type":   { "type": "TEXT", "nullable": false, "description": "Loại TK: checking | savings | loan" },
+        "balance":        { "type": "DECIMAL(18,2)", "nullable": false, "description": "Số dư hiện tại (VND)" },
+        "currency":       { "type": "TEXT", "nullable": false, "description": "Đơn vị tiền tệ: VND | USD" },
+        "status":         { "type": "TEXT", "nullable": false, "description": "Trạng thái: active | frozen | closed" },
+        "opened_at":      { "type": "TIMESTAMP", "nullable": false, "description": "Ngày mở tài khoản" }
+      },
+      "sample_rows": 3
+    },
+    "transactions": {
+      "description": "Lịch sử giao dịch — bảng lớn nhất, join với accounts",
+      "columns": {
+        "transaction_id":   { "type": "TEXT", "pk": true,  "description": "Mã giao dịch duy nhất" },
+        "account_id":       { "type": "TEXT", "fk": "accounts.account_id", "description": "Tài khoản thực hiện giao dịch" },
+        "transaction_type": { "type": "TEXT", "nullable": false, "description": "Loại GD: deposit | withdrawal | transfer_in | transfer_out | fee" },
+        "amount":           { "type": "DECIMAL(18,2)", "nullable": false, "description": "Số tiền giao dịch (VND), luôn dương" },
+        "direction":        { "type": "TEXT", "nullable": false, "description": "Chiều tiền: credit (tiền vào) | debit (tiền ra)" },
+        "description":      { "type": "TEXT", "nullable": true,  "description": "Nội dung chuyển khoản" },
+        "channel":          { "type": "TEXT", "nullable": true,  "description": "Kênh GD: mobile | internet | atm | branch | pos" },
+        "status":           { "type": "TEXT", "nullable": false, "description": "Kết quả: completed | pending | failed | reversed" },
+        "transacted_at":    { "type": "TIMESTAMP", "nullable": false, "description": "Thời điểm giao dịch" }
+      },
+      "business_rules": [
+        "Doanh thu = SUM(amount) WHERE direction='credit' AND status='completed'",
+        "Chi tiêu = SUM(amount) WHERE direction='debit' AND status='completed'",
+        "Giao dịch net = SUM(CASE WHEN direction='credit' THEN amount ELSE -amount END) WHERE status='completed'"
+      ],
+      "sample_rows": 5
+    },
+    "loan_products": {
+      "description": "Danh mục sản phẩm vay của ngân hàng",
+      "columns": {
+        "product_id":      { "type": "TEXT", "pk": true, "description": "Mã sản phẩm vay" },
+        "product_name":    { "type": "TEXT", "nullable": false, "description": "Tên sản phẩm" },
+        "loan_type":       { "type": "TEXT", "nullable": false, "description": "Phân loại: personal | mortgage | business | auto" },
+        "interest_rate":   { "type": "DECIMAL(5,2)", "nullable": false, "description": "Lãi suất %/năm" },
+        "max_term_months": { "type": "INTEGER", "nullable": false, "description": "Kỳ hạn tối đa (tháng)" },
+        "min_amount":      { "type": "DECIMAL(18,2)", "nullable": false, "description": "Số tiền vay tối thiểu (VND)" },
+        "max_amount":      { "type": "DECIMAL(18,2)", "nullable": false, "description": "Số tiền vay tối đa (VND)" },
+        "is_active":       { "type": "INTEGER", "nullable": false, "description": "1 = đang cung cấp, 0 = ngừng" }
+      },
+      "sample_rows": 3
+    },
+    "loans": {
+      "description": "Hợp đồng vay của khách hàng",
+      "columns": {
+        "loan_id":          { "type": "TEXT", "pk": true,  "description": "Mã hợp đồng vay" },
+        "customer_id":      { "type": "TEXT", "fk": "customers.customer_id", "description": "Khách hàng vay" },
+        "product_id":       { "type": "TEXT", "fk": "loan_products.product_id", "description": "Sản phẩm vay" },
+        "principal":        { "type": "DECIMAL(18,2)", "nullable": false, "description": "Số tiền gốc vay (VND)" },
+        "outstanding":      { "type": "DECIMAL(18,2)", "nullable": false, "description": "Dư nợ hiện tại (VND)" },
+        "term_months":      { "type": "INTEGER", "nullable": false, "description": "Kỳ hạn hợp đồng (tháng)" },
+        "monthly_payment":  { "type": "DECIMAL(18,2)", "nullable": false, "description": "Số tiền trả hàng tháng (VND)" },
+        "loan_status":      { "type": "TEXT", "nullable": false, "description": "Trạng thái: active | closed | overdue | written_off" },
+        "disbursed_at":     { "type": "TIMESTAMP", "nullable": false, "description": "Ngày giải ngân" },
+        "maturity_at":      { "type": "TIMESTAMP", "nullable": false, "description": "Ngày đáo hạn" }
+      },
+      "sample_rows": 3
+    }
+  },
+  "foreign_keys": [
+    "accounts.customer_id → customers.customer_id",
+    "transactions.account_id → accounts.account_id",
+    "loans.customer_id → customers.customer_id",
+    "loans.product_id → loan_products.product_id"
+  ]
+}
