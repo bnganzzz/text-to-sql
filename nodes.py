@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from state import AgentState, TableSelection, SQLGeneration
 import json
+from langchain_core.messages import HumanMessage, AIMessage
+
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -15,6 +17,20 @@ import sqlite3
 load_dotenv()
 
 
+def _load_few_shot_index():
+ 
+    with open ('few_shot_examples.json','r') as f:
+        data = json.load(f)
+    examples = data["examples"]
+    corpus = [ex["question"] for ex in examples]
+ 
+    vectorizer = TfidfVectorizer()
+    matrix = vectorizer.fit_transform(corpus)
+    return examples, vectorizer, matrix
+ 
+ 
+FEW_SHOT_EXAMPLES, FEW_SHOT_VECTORIZER, FEW_SHOT_MATRIX = _load_few_shot_index()
+
 def select_tables(state: AgentState) -> dict:
     model = ChatOpenRouter(
         model="cohere/north-mini-code:free",
@@ -23,7 +39,12 @@ def select_tables(state: AgentState) -> dict:
 
     question = state["question"]
     chat_history = state.get("messages", [])
-    system_prompt = """You are an AI Analyst at ACB Bank. Your task is to read the user's question and determine which database tables are required to generate the SQL query.
+    system_prompt = """You are an AI Analyst at ACB Bank. Your task is to read the user's question and determine which database tables are required to generate the SQL query. Return ONLY the table names.
+                        You MUST NOT:
+                    - Answer the user's question.
+                    - Explain your reasoning.
+                    - Generate SQL.
+                    - Infer any results.
                      Below is the list of available tables and their brief descriptions
                         `customers`: Thông tin khách hàng cá nhân và doanh nghiệp
                         `accounts`: Tài khoản ngân hàng của khách hàng
@@ -86,100 +107,129 @@ def inject_schema(state: AgentState) -> dict:
     return {"schema_context": "\n".join(schema_context)}
 
 
-def select_few_shots(state: AgentState) -> dict:
-    # read few shot examples json
-    with open ('few_shot_examples.json','r') as file:
-        data = json.load(file)
-    examples = data["examples"]
-    corpus = [ex["question"] for ex in examples]
-
-    vectorizer = TfidfVectorizer()
-    X = vectorizer.fit_transform(corpus)
-
+def select_few_shots(state: AgentState) -> dict: 
     question = state["question"]
-    question_vector = vectorizer.transform([question]) # ham transform nhan iterable list
-
-    similarities = cosine_similarity(question_vector, X).flatten()
+    question_vector = FEW_SHOT_VECTORIZER.transform([question])
+    similarities = cosine_similarity(question_vector, FEW_SHOT_MATRIX).flatten()
     top_indices = similarities.argsort()[-3:][::-1]
-
+ 
     few_shot_list = []
-
     for i in top_indices:
-        ex = examples[i]
+        ex = FEW_SHOT_EXAMPLES[i]
         few_shot_list.append(
             f"--- Example {ex['id']} ({ex['category']}) ---\n"
             f"Question: {ex['question']}\n"
             f"SQL:\n{ex['sql']}\n"
         )
-    few_shot_context = "\n".join(few_shot_list)
-    return {"few_shot_context": few_shot_context}
+    return {"few_shot_context": "\n".join(few_shot_list)}
     
 
 def generate_sql(state: AgentState) -> dict:
-    message = state.get("messages",[])
     model = ChatOpenRouter(
         model="cohere/north-mini-code:free",
         temperature=0,
     )
+
     question = state["question"]
+    chat_history = state.get("messages", [])
+
     schema_context = state["schema_context"]
     few_shot_context = state["few_shot_context"]
-    validation_error = state.get("validation_error","") # case try 1st time
-    retry_count = state.get("retry_count",0)
-    
-    system_prompt = (
-        "You are an expert SQL developer for ACB Bank's SQLite database. Your task is to convert a user's Vietnamese question into a correct SQLite SELECT query.\n"
-        
-        "=== SCHEMA CONTEXT===\n"
-        "{schema_context}\n\n"
-        
-        "=== FEW-SHOT EXAMPLES ===\n"
-        "{few_shot_context}\n\n"
-        
-        "=== REQUIREMENTS ===\n"
-        "1. Only return pure SQL query. No explanation, no markdown, do not wrap in ```sql).\n"
-        "2. The query must start with either SELECT or WITH.\n"
-        "3. Only transactions with status = 'completed' are considered valid unless the user explicitly specifies otherwise.\n"
-    )
 
-    error_prompt = (
-            "\n=== WARNING: YOUR PREVIOUS SQL QUERY WAS INVALID ===\n"
-            f"{validation_error}\n"
-            "Hãy phân tích kỹ lỗi trên, đối chiếu lại với Schema và Business Rules để sửa lại câu lệnh SQL cho đúng.\n"
-        )    
-    input_variables = {
+    validation_error = state.get("validation_error", "")
+    retry_count = state.get("retry_count", 0)
+
+    retry_instruction = ""
+
+    if retry_count > 0:
+        retry_instruction = """
+        === PREVIOUS SQL FAILED ===
+
+        Validation Error:
+        {validation_error}
+
+        Please analyze the error carefully.
+
+        Requirements:
+        - Fix ONLY the SQL.
+        - Follow the provided schema.
+        - Do not repeat the previous mistake.
+        - Return ONLY the corrected SQL.
+        """
+
+    system_prompt = """
+        You are an expert SQL developer for ACB Bank's SQLite database.
+
+        Your task is to convert a Vietnamese banking question into a valid SQLite query.
+
+        ========================
+        DATABASE SCHEMA
+        ========================
+
+        {schema_context}
+
+        ========================
+        FEW SHOT EXAMPLES
+        ========================
+
+        {few_shot_context}
+
+        ========================
+        RULES
+        ========================
+
+        1. Return ONLY SQL.
+        2. Do NOT use markdown.
+        3. Do NOT explain.
+        4. Query must start with SELECT or WITH.
+        5. Only use tables and columns from the schema.
+        6. Unless explicitly requested otherwise, only transactions with
+        status = 'completed' are considered valid.
+
+        {retry_instruction}
+        """
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        MessagesPlaceholder("chat_history"),
+        ("human","""User Question: {question}. Generate the SQLite query.""")
+    ])
+
+    chain = prompt | model | StrOutputParser()
+
+    sql = chain.invoke({
         "schema_context": schema_context,
         "few_shot_context": few_shot_context,
-        "chat_history": message,
-        "question": question
-    }
-    if retry_count > 0:
-        system_prompt = system_prompt + error_prompt
-        input_variables["validation_error"] = validation_error
+        "retry_instruction": retry_instruction,
+        "validation_error": validation_error,
+        "question": question,
+        "chat_history": chat_history,
+    })
 
-    prompt_template = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "generate a SQL query for the following question: {question}")
-    ])
-    chain = prompt_template | model | StrOutputParser()
-
-    sql = chain.invoke(input_variables)
     return {"sql": sql}
 
-
-def validate_sql(state: AgentState) -> list[dict]:
+def validate_sql(state: AgentState) -> dict:
     sql = state["sql"]
     selected_tables = state["selected_tables"]
     retry_count = state.get("retry_count",0) + 1
 
-    # LAYER 1: SAFETY CHECK
+    # LAYER 1: SAFETY CHECK    
     if sql.strip().upper().split()[0] not in ["SELECT", "WITH"]:
         print ("Layer 1 failed. Query must start with SELECT or WITH ")
         return {
             "validation_error": "Query must start with SELECT or WITH.", # k rretry
             "retry_count": 10 # qua fallback 
         }
+    
+    # case CTE
+    mutation_keywords = [r"\bDELETE\b", r"\bUPDATE\b", r"\bINSERT\b", r"\bDROP\b", r"\bALTER\b"]
+    for keyword in mutation_keywords:
+        if re.search(keyword, sql, re.IGNORECASE):
+            return {
+                "validation_error": f"Không hỗ trợ thay đổi dữ liệu ({keyword.replace('\\b', '')}). Chỉ chấp nhận SELECT.",
+                "retry_count": 10, 
+            }
+    
     sql = sql.rstrip().rstrip(";") # bo ; 
     if "LIMIT" not in sql.upper():
         sql = f"{sql} LIMIT 100"
@@ -187,11 +237,18 @@ def validate_sql(state: AgentState) -> list[dict]:
 
 
     # LAYER 3: SCHEMA VALIDATION
-    allowed_tables = set(selected_tables)
+    allowed_tables = set(t.lower() for t in selected_tables)
     print(allowed_tables)
-    extracted_tables = re.findall(r"\b(?:from|join)\s+([a-zA-Z0-9_]+)", sql, re.IGNORECASE)
+    
+    normalized_sql = re.sub(r'\s+', ' ', sql)
+    
+    cte_names = set(t.lower() for t in re.findall(r"\b([a-zA-Z0-9_]+)\s+as\s*\(", normalized_sql, re.IGNORECASE))
+    print(f"CTE: {cte_names}")
+    
+    extracted_tables = re.findall(r"\b(?:from|join)\s+([a-zA-Z0-9_]+)", normalized_sql, re.IGNORECASE)
+    
     for table in extracted_tables:
-        if table.lower() not in allowed_tables:
+        if table.lower() not in allowed_tables and table.lower() not in cte_names:
             print(f"Layer 3 failed: Table '{table}' does not exist.")
             return {
                 "validation_error": f"Table '{table}' does not exist. Valid tables: {', '.join(allowed_tables)}.",
@@ -205,6 +262,7 @@ def validate_sql(state: AgentState) -> list[dict]:
         conn.execute(f'EXPLAIN QUERY PLAN {sql}')
         return {
             "validation_error": "",
+            "retry_count": retry_count, 
             "sql": sql
         }
     except sqlite3.OperationalError as e:
@@ -270,7 +328,7 @@ def format_response(state: AgentState) -> str:
     )
 
     system_prompt = (   
-        "You are a professional internal AI Assistant for ACB Bank.n"
+        "You are a professional internal AI Assistant for ACB Bank."
         "Your task is to read the raw SQL query results and rewrite them into a natural, clear, and polite Vietnamese response for bank employees.\n\n"
         
         "=== SYSTEM INPUT ===\n"
@@ -297,11 +355,44 @@ def format_response(state: AgentState) -> str:
         "sql": sql,
         "sql_result": sql_result
     })
-    return {"final_answer": final_answer, "messages": [("assistant", final_answer)]}
+    return {
+        "final_answer": final_answer, 
+        "messages": [
+        HumanMessage(content=question),
+        AIMessage(content=final_answer)]
+    }
 
-def fallback_response(state: AgentState) -> str:
-    return {"final_answer": "Hệ thống hiện tại chưa thể tìm thấy dữ liệu chính xác cho câu hỏi của bạn. Vui lòng thử lại với câu hỏi rõ ràng hơn hoặc liên hệ bộ phận hỗ trợ kỹ thuật...."}
+def fallback_response(state: AgentState):
+    model = ChatOpenRouter(
+        model="cohere/north-mini-code:free",
+        temperature=0,
+    )
+    validation_error = state.get("validation_error", "")
 
+    system_prompt = """
+    You are a helpful banking AI assistant.
+
+    Your task is to explain a technical validation error to the user in a friendly and concise way based STRICTLY on the provided error context.
+
+    Rules:
+    - NEVER mention technical terms: SQL, database, parser, schema, or internal code.
+    - NEVER copy or mention any code-like names, table names, or column names that the system or AI self-created.
+    - Focus only on what the user asked (the original question). If they asked about "điểm tín dụng", address "điểm tín dụng" and confirm it's unavailable. Do not talk about other random things.
+    - Explain the problem in natural, polite Vietnamese.
+    - Suggest how the user can rephrase or what valid information they should ask instead.
+    - Keep the response under 100 words.
+    """
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human",
+         "Validation error:\n{error}")
+    ])
+
+    chain = prompt | model | StrOutputParser()
+
+    message = chain.invoke({"error": validation_error})
+
+    return {"final_answer": message}
 
 """user_input = {"question": "Sản phẩm vay nào có tổng dư nợ cao nhất và lãi suất của nó là bao nhiêu?"}
 result = graph.invoke(user_input, config=config)
