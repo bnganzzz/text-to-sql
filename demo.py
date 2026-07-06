@@ -1,7 +1,7 @@
 import chainlit as cl
 import uuid
 from langgraph.checkpoint.memory import MemorySaver
-from agent import graph
+from graph import graph
 
 @cl.on_chat_start
 async def on_chat_start():

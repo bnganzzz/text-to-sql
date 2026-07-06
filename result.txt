@@ -1,0 +1,248 @@
+Bắt đầu test 15 câu...
+
+[1/15] Câu hỏi: Có tổng cộng bao nhiêu khách hàng trong hệ thống?
+tự động thêm LIMIT 100 vào query.
+{'customers'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT COUNT(*) AS total_customers FROM customers LIMIT 100
+-> Retry count: 0
+-> Final answer: Hệ thống hiện có tổng cộng **30 khách hàng**.
+
+[2/15] Câu hỏi: Liệt kê tất cả sản phẩm vay đang còn cung cấp (is_active = 1)
+tự động thêm LIMIT 100 vào query.
+{'loan_products'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT * FROM loan_products WHERE is_active = 1 LIMIT 100
+-> Retry count: 0
+-> Final answer: Dưới đây là danh sách tất cả các sản phẩm vay hiện đang hoạt động (is_active = 1) trong hệ thống:
+
+- **PROD 001 – Vay Tiêu Dùng Thông Thường** (Loại: cá nhân)
+  - Lãi suất: **12.5 %** một năm
+  - Thời hạn tối đa: **60 tháng**
+  - Hạn mức vay: **5,000,000 VND – 500,000,000 VND**
+
+- **PROD 002 – Vay Mua Nhà Ở** (Loại: thế chấp)
+  - Lãi suất: **8.2 %** một năm
+  - Thời hạn tối đa: **300 tháng**
+  - Hạn mức vay: **500,000,000 VND – 10,000,000,000 VND**
+
+- **PROD 003 – Vay Kinh Doanh SME** (Loại: doanh nghiệp)
+  - Lãi suất: **10.8 %** một năm
+  - Thời hạn tối đa: **120 tháng**
+  - Hạn mức vay: **100,000,000 VND – 5,000,000,000 VND**
+
+- **PROD 004 – Vay Mua Ô Tô** (Loại: ô tô)
+  - Lãi suất: **9.5 %** một năm
+  - Thời hạn tối đa: **84 tháng**
+  - Hạn mức vay: **100,000,000 VND – 2,000,000,000 VND**
+
+- **PROD 005 – Vay Du Học** (Loại: cá nhân)
+  - Lãi suất: **11 %** một năm
+  - Thời hạn tối đa: **84 tháng**
+  - Hạn mức vay: **50,000,000 VND – 500,000,000 VND**
+
+Tất cả các sản phẩm trên đều hiện đang được cung cấp và sẵn sàng để khách hàng đăng ký.
+
+[3/15] Câu hỏi: Tổng số giao dịch bị failed là bao nhiêu?
+tự động thêm LIMIT 100 vào query.
+{'transactions'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT COUNT(*) AS failed_txn_count FROM transactions WHERE status = 'failed' LIMIT 100
+-> Retry count: 0
+-> Final answer: Tổng số giao dịch bị failed là **60**.
+
+[4/15] Câu hỏi: Top 3 thành phố có nhiều khách hàng nhất
+{'customers'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT city, COUNT(*) AS customer_count FROM customers GROUP BY city ORDER BY customer_count DESC LIMIT 3
+-> Retry count: 0
+-> Final answer: Dưới đây là 3 thành phố có nhiều khách hàng nhất của chúng tôi:
+
+- **Hồ Chí Minh** – 12 khách hàng
+- **Hà Nội** – 9 khách hàng
+- **Đà Nẵng** – 4 khách hàng
+
+[5/15] Câu hỏi: Tổng tiền nộp vào (deposit) qua kênh mobile trong quý 3 năm 2024
+tự động thêm LIMIT 100 vào query.
+{'transactions'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT SUM(amount) AS total_deposit FROM transactions WHERE transaction_type = 'deposit' AND channel = 'mobile' AND status = 'completed' AND transacted_at >= '2024-07-01' AND transacted_at < '2024-10-01' LIMIT 100
+-> Retry count: 0
+-> Final answer: Tổng số tiền nộp vào (deposit) qua kênh mobile trong quý 3 năm 2024 là **68,301,863.51 VND**.
+
+
+[6/15] Câu hỏi: Khách hàng nào có số dư tài khoản checking cao nhất? Cho biết tên và số dư.
+{'accounts', 'customers'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT c.full_name, a.balance FROM customers c JOIN accounts a ON c.customer_id = a.customer_id WHERE a.account_type = 'checking' AND a.status = 'active' ORDER BY a.balance DESC LIMIT 1
+-> Retry count: 0
+-> Final answer: Khách hàng có số dư tài khoản checking cao nhất là **Công ty TNHH Thương Mại XYZ** với số dư **199,507,767.54 VND**.
+
+[7/15] Câu hỏi: Số lượng và tổng dư nợ của các khoản vay theo từng trạng thái
+tự động thêm LIMIT 100 vào query.
+{'loans'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT loan_status, COUNT(*) AS loan_count, SUM(outstanding) AS total_outstanding FROM loans GROUP BY loan_status LIMIT 100
+-> Retry count: 0
+-> Final answer: Dưới đây là thông tin tổng hợp về số lượng khoản vay và tổng dư nợ theo từng trạng thái:
+
+- **Trạng thái active**: 14 khoản vay, tổng dư nợ **8,213,670,555.26 VND**
+- **Trạng thái closed**: 1 khoản vay, tổng dư nợ **469,422,418.70 VND**
+- **Trạng thái overdue**: 5 khoản vay, tổng dư nợ **800,324,947.00 VND**
+- **Trạng thái written_off**: 5 khoản vay, tổng dư nợ **537,441,074.91 VND**
+
+Dữ liệu này phản ánh chính xác số lượng và tổng số dư nợ hiện tại của các khoản vay trong từng trạng thái.
+
+[8/15] Câu hỏi: Tháng nào có tổng giao dịch lớn nhất trong năm 2024?
+{'transactions'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT strftime('%Y-%m', transacted_at) AS month, SUM(amount) AS total_amount FROM transactions WHERE status = 'completed' AND transacted_at >= '2024-01-01' AND transacted_at < '2024-12-31' GROUP BY strftime('%Y-%m', transacted_at) ORDER BY total_amount DESC LIMIT 1
+-> Retry count: 0
+-> Final answer: Tháng có tổng giá trị giao dịch cao nhất trong năm 2024 là **tháng 5 năm 2024**, với tổng số tiền giao dịch là **816,880,255.46 VND**.
+
+[9/15] Câu hỏi: Danh sách khách hàng premium có khoản vay đang active
+tự động thêm LIMIT 100 vào query.
+{'customers', 'loans'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT c.customer_id, c.full_name, c.segment, c.city, l.loan_id, l.outstanding FROM customers c JOIN loans l ON c.customer_id = l.customer_id WHERE c.segment = 'premium' AND l.loan_status = 'active' ORDER BY c.full_name LIMIT 100
+-> Retry count: 0
+-> Final answer: Dưới đây là danh sách các khách hàng premium hiện có khoản vay đang hoạt động:
+
+- **Mã khách hàng:** CUS_000027 | **Họ tên:** Công ty CP Logistics PQR | **Thành phố:** Hải Phòng | **Mã khoản vay:** LOAN_000024 | **Số dư nợ:** 263,442,858.63 VND
+- **Mã khách hàng:** CUS_000022 | **Họ tên:** Công ty CP Sản Xuất ABC | **Thành phố:** Hà Nội | **Mã khoản vay:** LOAN_000004 | **Số dư nợ:** 28,032,154.97 VND
+- **Mã khách hàng:** CUS_000030 | **Họ tên:** Công ty CP Thực Phẩm YZA | **Thành phố:** Hồ Chí Minh | **Mã khoản vay:** LOAN_000002 | **Số dư nợ:** 47,116,555.05 VND
+- **Mã khách hàng:** CUS_000025 | **Họ tên:** Công ty CP Xuất Nhập Khẩu JKL | **Thành phố:** Hồ Chí Minh | **Mã khoản vay:** LOAN_000003 | **Số dư nợ:** 33,334,554.77 VND
+- **Mã khách hàng:** CUS_000015 | **Họ tên:** Phan Quốc Bảo | **Thành phố:** Hồ Chí Minh | **Mã khoản vay:** LOAN_000016 | **Số dư nợ:** 2,612,225,497.90 VND
+- **Mã khách hàng:** CUS_000016 | **Họ tên:** Tô Thị Yến | **Thành phố:** Hà Nội | **Mã khoản vay:** LOAN_000021 | **Số dư nợ:** 1,437,104,351.96 VND
+- **Mã khách hàng:** CUS_000028 | **Họ tên:** Tập đoàn Xây Dựng STU | **Thành phố:** Hồ Chí Minh | **Mã khoản vay:** LOAN_000025 | **Số dư nợ:** 1,632,278,066.50 VND
+
+**Tóm tắt:** Hệ thống hiện có **7 khách hàng premium** với khoản vay đang hoạt động.
+
+[10/15] Câu hỏi: Lãi suất trung bình của các sản phẩm vay theo từng loại (loan_type)
+tự động thêm LIMIT 100 vào query.
+{'loan_products'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT loan_type, AVG(interest_rate) AS avg_interest_rate FROM loan_products GROUP BY loan_type LIMIT 100
+-> Retry count: 0
+-> Final answer: Dưới đây là lãi suất trung bình của các sản phẩm vay theo từng loại:
+
+- **Auto**: 9.5%
+- **Business**: 9.15%
+- **Mortgage**: 8.2%
+- **Personal**: 11.75%
+
+Trong đó, sản phẩm vay cá nhân có lãi suất trung bình cao nhất (11.75%), trong khi sản phẩm vay thế chấp có lãi suất trung bình thấp nhất (8.2%).
+
+[11/15] Câu hỏi: Tổng doanh thu ròng (tiền vào trừ tiền ra) của từng khách hàng trong năm 2024, chỉ lấy top 5
+{'transactions', 'accounts', 'customers'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT c.customer_id, c.full_name, SUM(CASE WHEN t.direction='credit' THEN t.amount ELSE -t.amount END) AS net_revenue FROM customers c JOIN accounts a ON c.customer_id = a.customer_id JOIN transactions t ON a.account_id = t.account_id WHERE t.status='completed' AND t.transacted_at >= '2024-01-01' AND t.transacted_at < '2025-01-01' GROUP BY c.customer_id, c.full_name ORDER BY net_revenue DESC LIMIT 5
+-> Retry count: 0
+-> Final answer: Dưới đây là 5 khách hàng có tổng doanh thu ròng cao nhất trong năm 2024 (tiền vào trừ tiền ra):
+
+1. **Tập đoàn Xây Dựng STU** – 207,442,778.24 VND
+2. **Đặng Thị Thu** – 178,779,909.78 VND
+3. **Công ty CP Thực Phẩm YZA** – 145,013,754.15 VND
+4. **Phạm Thu Hương** – 135,423,116.36 VND
+5. **Lưu Thị Phương** – 132,905,429.60 VND
+
+[12/15] Câu hỏi: Khách hàng nào có tổng dư nợ vay lớn hơn tổng số dư tài khoản của họ? (rủi ro thanh khoản)
+tự động thêm LIMIT 100 vào query.
+{'accounts', 'customers', 'loans'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT c.customer_id, c.full_name, SUM(l.outstanding) AS total_outstanding, SUM(a.balance) AS total_balance FROM customers c LEFT JOIN loans l ON c.customer_id = l.customer_id LEFT JOIN accounts a ON c.customer_id = a.customer_id GROUP BY c.customer_id, c.full_name HAVING SUM(l.outstanding) > SUM(a.balance) LIMIT 100
+-> Retry count: 0
+-> Final answer: Dưới đây là danh sách các khách hàng có tổng dư nợ vay lớn hơn tổng số dư tài khoản (có rủi ro thanh khoản):
+
+- **Nguyễn Văn An** (Mã khách hàng: CUS_000001)
+  - Tổng dư nợ vay: **511,693,473.10 VND**
+  - Tổng số dư tài khoản: **135,539,980.77 VND**
+
+- **Lê Quang Minh** (Mã khách hàng: CUS_000003)
+  - Tổng dư nợ vay: **375,635,358.86 VND**
+  - Tổng số dư tài khoản: **191,446,893.13 VND**
+
+- **Vũ Minh Tuấn** (Mã khách hàng: CUS_000007)
+  - Tổng dư nợ vay: **553,915,203.50 VND**
+  - Tổng số dư tài khoản: **478,051,014.03 VND**
+
+- **Đỗ Thị Mai** (Mã khách hàng: CUS_000008)
+  - Tổng dư nợ vay: **1,853,216,249.84 VND**
+  - Tổng số dư tài khoản: **501,871,054.62 VND**
+
+- **Cao Thị Linh** (Mã khách hàng: CUS_000012)
+  - Tổng dư nợ vay: **336,508,278.21 VND**
+  - Tổng số dư tài khoản: **34,310,615.77 VND**
+
+- **Phan Quốc Bảo** (Mã khách hàng: CUS_000015)
+  - Tổng dư nợ vay: **5,224,450,995.80 VND**
+  - Tổng số dư tài khoản: **39,611,141.37 VND**
+
+- **Tô Thị Yến** (Mã khách hàng: CUS_000016)
+  - Tổng dư nợ vay: **2,874,208,703.92 VND**
+  - Tổng số dư tài khoản: **339,974,851.62 VND**
+
+- **Đặng Thị Thu** (Mã khách hàng: CUS_000018)
+  - Tổng dư nợ vay: **298,683,671.95 VND**
+  - Tổng số dư tài khoản: **28,660,030.93 VND**
+
+- **Ngô Tuấn Anh** (Mã khách hàng: CUS_000019)
+  - Tổng dư nợ vay: **947,104,716.22 VND**
+  - Tổng số dư tài khoản: **326,534,403.67 VND**
+
+- **Công ty CP Logistics PQR** (Mã khách hàng: CUS_000027)
+  - Tổng dư nợ vay: **526,885,717.26 VND**
+  - Tổng số dư tài khoản: **469,642,205.28 VND**
+
+- **Tập đoàn Xây Dựng STU** (Mã khách hàng: CUS_000028)
+  - Tổng dư nợ vay: **3,264,556,133.00 VND**
+  - Tổng số dư tài khoản: **306,592,308.55 VND**
+
+- **Công ty TNHH Dược Phẩm VWX** (Mã khách hàng: CUS_000029)
+  - Tổng dư nợ vay: **469,422,418.70 VND**
+  - Tổng số dư tài khoản: **21,371,523.48 VND**
+
+Tất cả các khách hàng trên đều có tổng dư nợ vay vượt quá tổng số dư tài khoản, điều này cho thấy rủi ro thanh khoản tiềm ẩn.
+
+[13/15] Câu hỏi: Tỷ lệ giao dịch thành công (completed) theo từng kênh, sắp xếp từ cao đến thấp
+tự động thêm LIMIT 100 vào query.
+{'transactions'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT channel, ROUND(100.0 * SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) / COUNT(*), 2) AS success_rate FROM transactions GROUP BY channel ORDER BY success_rate DESC LIMIT 100
+-> Retry count: 0
+-> Final answer: Dưới đây là tỷ lệ giao dịch thành công theo từng kênh, được sắp xếp từ cao đến thấp:
+
+- **ATM**: 70,49%
+- **POS**: 67,86%
+- **Internet**: 62,42%
+- **Di động**: 60,42%
+- **Chi nhánh**: 59,26%
+
+[14/15] Câu hỏi: So sánh số lượng và tổng tiền giao dịch giữa khách hàng cá nhân và doanh nghiệp trong năm 2024
+tự động thêm LIMIT 100 vào query.
+{'transactions', 'accounts', 'customers'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT c.customer_type, COUNT(*) AS transaction_count, SUM(t.amount) AS total_amount FROM transactions t JOIN accounts a ON t.account_id = a.account_id JOIN customers c ON a.customer_id = c.customer_id WHERE t.status = 'completed' AND t.transacted_at >= '2024-01-01' AND t.transacted_at < '2025-01-01' GROUP BY c.customer_type LIMIT 100
+-> Retry count: 0
+-> Final answer: Dựa trên dữ liệu năm 2024, here's sự so sánh giữa khách hàng cá nhân và doanh nghiệp:
+
+**Khách hàng cá nhân**
+- **Số lượng giao dịch:** 195
+- **Tổng số tiền giao dịch:** 4,450,832,612.53 VND
+
+**Khách hàng doanh nghiệp**
+- **Số lượng giao dịch:** 118
+- **Tổng số tiền giao dịch:** 2,504,651,995.01 VND
+
+**Tóm tắt:**
+- Khách hàng cá nhân thực hiện nhiều giao dịch hơn (195 so với 118), cao hơn khoảng 65%.
+- Tổng giá trị giao dịch của khách hàng cá nhân cũng cao hơn đáng kể, đạt khoảng 4.45 nghìn tỷ VND, so với khoảng 2.50 nghìn tỷ VND của khách hàng doanh nghiệp.
+
+Nhìn chung, khách hàng cá nhân có cả số lượng và tổng giá trị giao dịch cao hơn trong năm 2024.
+
+[15/15] Câu hỏi: Sản phẩm vay nào có tổng dư nợ cao nhất và lãi suất của nó là bao nhiêu?
+{'loan_products', 'loans'}
+Valid SQL. Routing to execute_sql.
+-> SQL: SELECT lp.product_name, lp.interest_rate, SUM(l.outstanding) AS total_outstanding FROM loan_products lp JOIN loans l ON lp.product_id = l.product_id WHERE l.loan_status = 'active' GROUP BY lp.product_id, lp.product_name, lp.interest_rate ORDER BY total_outstanding DESC LIMIT 1
+-> Retry count: 0
+-> Final answer: Sản phẩm vay có tổng dư nợ cao nhất là **Vay Mua Nhà Ở**, với lãi suất **8,2%** và tổng dư nợ hiện tại là **5,434,554,547.95 VND**.

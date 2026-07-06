@@ -1,14 +1,7 @@
-from langgraph.graph import START, StateGraph, MessagesState, END
-from langgraph.graph.message import add_messages
 from langchain_core.output_parsers import StrOutputParser
-from langgraph.checkpoint.memory import MemorySaver
-from pydantic import BaseModel, Field
-from langgraph.prebuilt import tools_condition, ToolNode
 from dotenv import load_dotenv
-from pydantic import BaseModel
-from typing import List, Annotated
-from typing_extensions import TypedDict
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from state import AgentState, TableSelection, SQLGeneration
 import json
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -22,30 +15,6 @@ import sqlite3
 load_dotenv()
 
 
-
-
-class AgentState(TypedDict):
-    question: str
-    selected_tables: list[str]
-    schema_context: str
-    few_shot_context: str
-    sql: str 
-    validation_error: str
-    retry_count: int
-    sql_result: list[dict]
-    final_answer: str
-    messages: Annotated[list, add_messages]
-
-class TableSelection(BaseModel):
-    tables: List[str] = Field(description="List of tables needed to answer the question. Valid table names: customers, accounts, transactions, loan_products, loans.")
-
-class SQLGeneration(BaseModel):
-    sql: str = Field(description="A clean, executable SQL SELECT query")
-
-# define llm
-
-
-# nodes
 def select_tables(state: AgentState) -> dict:
     model = ChatOpenRouter(
         model="cohere/north-mini-code:free",
@@ -74,7 +43,7 @@ def select_tables(state: AgentState) -> dict:
         })
         return {"selected_tables": response.tables}
     except Exception as e:
-        return f"Cannot handle this request. Please try again. Error: {e}"
+        return {"validation_error": f"Table selection failed: {e}", "selected_tables": []}    
     
 def inject_schema(state: AgentState) -> dict:
     selected_tables = state["selected_tables"]
@@ -331,40 +300,8 @@ def format_response(state: AgentState) -> str:
     return {"final_answer": final_answer, "messages": [("assistant", final_answer)]}
 
 def fallback_response(state: AgentState) -> str:
-    return {"final_answer": "error...."}
+    return {"final_answer": "Hệ thống hiện tại chưa thể tìm thấy dữ liệu chính xác cho câu hỏi của bạn. Vui lòng thử lại với câu hỏi rõ ràng hơn hoặc liên hệ bộ phận hỗ trợ kỹ thuật...."}
 
-# build graph
-builder = StateGraph(AgentState)
-builder.add_node("select_tables", select_tables)
-builder.add_node("inject_schema", inject_schema)
-builder.add_node("select_few_shots", select_few_shots)
-builder.add_node("generate_sql", generate_sql)
-builder.add_node("validate_sql", validate_sql)
-builder.add_node("execute_sql", execute_sql)
-builder.add_node("format_response", format_response)
-builder.add_node("fallback_response", fallback_response)
-
-
-# logic
-builder.add_edge(START, "select_tables")
-builder.add_edge("select_tables", "inject_schema")
-builder.add_edge("inject_schema", "select_few_shots")
-builder.add_edge("select_few_shots", "generate_sql")
-builder.add_edge("generate_sql", "validate_sql")
-builder.add_conditional_edges("validate_sql",route_after_validate, {
-    "execute_sql": "execute_sql",
-    "generate_sql": "generate_sql",
-    "fallback": "fallback_response"
-} )
-builder.add_edge("execute_sql", "format_response")
-builder.add_edge("format_response", END)
-builder.add_edge("fallback_response", END)
-
-
-
-checkpointer = MemorySaver() 
-graph = builder.compile(checkpointer=checkpointer)
-config = {"configurable" : {"thread_id":"s2"}}
 
 """user_input = {"question": "Sản phẩm vay nào có tổng dư nợ cao nhất và lãi suất của nó là bao nhiêu?"}
 result = graph.invoke(user_input, config=config)
@@ -378,36 +315,4 @@ result = graph.invoke(user_input, config=config)
 print("==== q2")
 print(result["final_answer"])
 """
-
-
-
-
-if __name__ == "__main__":
-    with open("test_questions.json", "r", encoding="utf-8") as f:
-        test_data = json.load(f)
-
-    questions_list = test_data.get("questions", test_data) if isinstance(test_data, dict) else test_data
-    total_questions = len(questions_list)
-    correct_count = 0
-
-    print(f"Bắt đầu test {total_questions} câu...")
-
-    for idx, item in enumerate(questions_list):
-        test_config = {"configurable": {"thread_id": f"eval_session_{idx}"}}
-        
-        question = item["question"]
-        expected_sql = item.get("expected_sql", "N/A") 
-        
-        print(f"\n[{idx+1}/{total_questions}] Câu hỏi: {question}")
-        
-        try:
-            res = graph.invoke({"question": question, "retry_count": 0}, config=test_config)
-            print(f"-> SQL: {res.get('sql')}")
-            print(f"-> Retry count: {res.get('retry_count', 0)}")
-            print(f"-> Final answer: {res.get('final_answer')}")
-    
-            
-        except Exception as e:
-            print(f"ERROR: {str(e)}")
-
     
