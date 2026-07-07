@@ -381,6 +381,8 @@ def fallback_response(state: AgentState):
     - Explain the problem in natural, polite Vietnamese.
     - Suggest how the user can rephrase or what valid information they should ask instead.
     - Keep the response under 100 words.
+    - If the error contains "Query must start with SELECT or WITH", explain politely that the system only supports viewing or looking up data, and does not allow modifying or executing other actions.
+    - Focus only on what the user asked (the original question)..
     """
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
