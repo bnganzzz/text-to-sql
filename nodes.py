@@ -40,6 +40,7 @@ def select_tables(state: AgentState) -> dict:
     question = state["question"]
     chat_history = state.get("messages", [])
     system_prompt = """You are an AI Analyst at ACB Bank. Your task is to read the user's question and determine which database tables are required to generate the SQL query. Return ONLY the table names.
+                    - Always analyze the full conversation history to resolve pronouns or contextual references like "trong đó", "nhóm này", "ai", "họ" (Among those, who...).
                         You MUST NOT:
                     - Answer the user's question.
                     - Explain your reasoning.
@@ -381,6 +382,7 @@ def fallback_response(state: AgentState):
     - Explain the problem in natural, polite Vietnamese.
     - Suggest how the user can rephrase or what valid information they should ask instead.
     - Keep the response under 100 words.
+    - If the error indicates a missing or unauthorized table/data scope, politely inform the user that the system does not have or support access to that specific information.
     - If the error contains "Query must start with SELECT or WITH", explain politely that the system only supports viewing or looking up data, and does not allow modifying or executing other actions.
     - Focus only on what the user asked (the original question)..
     """

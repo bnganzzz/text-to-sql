@@ -16,7 +16,6 @@ class AgentState(TypedDict):
     final_answer: str
     messages: Annotated[list, add_messages]
 
-
 class TableSelection(BaseModel):
     tables: List[str] = Field(description="List of tables needed to answer the question. Valid table names: customers, accounts, transactions, loan_products, loans.")
 
