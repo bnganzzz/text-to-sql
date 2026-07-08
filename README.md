@@ -55,41 +55,8 @@ The core of this system is a stateful graph where specialized nodes handle separ
 ```
 
 ---
-## 🚀 Features
 
-- **Agentic Workflow**: Managed state transitions and sophisticated query correction loops implemented via LangGraph (`graph.py`, `nodes.py`, `state.py`).
-- **Interactive UI**: Clean chat interface powered by Chainlit (`demo.py`, `chainlit.md`) allowing users to interactively query databases in natural language.
-- **Dynamic Few-Shot Prompting**: Uses curated few-shot examples (`few_shot_examples.json`) to boost model translation accuracy for complex schema layouts.
-- **Automated DB Setup**: Streamlined seeding and instantiation scripts (`setup_db.py`, `schema.json`).
-- **Rigorous Evaluation**: Validation suite (`eval.py`, `test_questions.json`) to run benchmark tests against a gold standard dataset, logging execution results (`result.txt`).
-- **Production Ready**: Fully containerized using Docker and Docker Compose for easy deployment.
-
----
-
-## 📁 Repository Structure
-
-```bash
-├── .dockerignore            # Specifies files to exclude from Docker images
-├── .gitignore               # Standard Git ignore configurations
-├── Dockerfile               # Multi-stage build definition for the application
-├── docker-compose.yml       # Orchestration file for app and database services
-├── requirements.txt         # Managed Python package dependencies
-├── schema.json              # Structural definition of the target database schemas
-├── setup_db.py              # Script to initialize, schema-map, and populate the DB
-├── state.py                 # Graph state and context specifications for LangGraph
-├── nodes.py                 # Business logic and LLM invocations for agent nodes
-├── graph.py                 # Core routing logic and compilation of the agent workflow
-├── demo.py                  # Entrypoint for the Chainlit web interface
-├── chainlit.md              # Documentation/landing view rendered within Chainlit
-├── few_shot_examples.json   # Curated natural-language to SQL pairings for prompt injection
-├── test_questions.json      # Gold-standard evaluation questions and ground truth queries
-├── eval.py                  # Benchmark script evaluating accuracy and performance
-└── result.txt               # Stored metrics and outputs from evaluation runs
-```
-
----
-
-## 🛠️ Quick Start
+## 2. Setup & Execution Guide
 
 ### Prerequisites
 * Python 3.12 or higher
@@ -137,10 +104,12 @@ The core of this system is a stateful graph where specialized nodes handle separ
    ```bash
    chainlit run demo.py -w
    ```
-
+Try these questions:
+* `"Liệt kê top 3 khách hàng có tổng số dư tài khoản cao nhất"`
+* `"Sản phẩm vay nào có kỳ hạn lớn nhất?"`
 ---
 
-## 📊 Evaluation 
+## 3. Evaluation 
 
 To assess the correctness, performance, and formatting of the generated SQL queries against standard test suites:
 
@@ -148,3 +117,9 @@ To assess the correctness, performance, and formatting of the generated SQL quer
 python eval.py
 ```
 This script runs the query test cases from `test_questions.json` through the Compiled LangGraph workflow.
+
+---
+
+## 4. Limitations
+
+- **Lack of Intent Classification (Chitchat Handling)**: The current architecture lacks an upfront intent classification mechanism. Standard greetings, casual chitchat, or out-of-scope conversational inputs are not handled natively; instead, they are routed entirely through all the nodes, which forces the LLM to inappropriately attempt schema mapping and query generation for non-database questions.
