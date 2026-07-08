@@ -8,6 +8,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # init database 
-RUN python setup_db.py
+RUN python data/setup_db.py
 EXPOSE 8000
 CMD ["chainlit", "run", "demo.py", "--host", "0.0.0.0", "--port", "8000"]

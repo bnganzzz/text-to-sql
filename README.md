@@ -97,7 +97,7 @@ The core of this system is a stateful graph where specialized nodes handle separ
 
 3. **Initialize the Database:**
    ```bash
-   python setup_db.py
+   python data/setup_db.py
    ```
 
 4. **Launch the Interactive UI:**
@@ -107,6 +107,7 @@ The core of this system is a stateful graph where specialized nodes handle separ
 Try these questions:
 * `"Liệt kê top 3 khách hàng có tổng số dư tài khoản cao nhất"`
 * `"Sản phẩm vay nào có kỳ hạn lớn nhất?"`
+
 ---
 
 ## 3. Evaluation 

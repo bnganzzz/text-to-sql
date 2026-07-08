@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from state import AgentState, TableSelection, SQLGeneration
 import json
+import os
 from langchain_core.messages import HumanMessage, AIMessage
 
 
@@ -19,7 +20,8 @@ load_dotenv()
 
 def _load_few_shot_index():
  
-    with open ('few_shot_examples.json','r') as f:
+    few_shot_path = os.path.join("data", "few_shot_examples.json")
+    with open(few_shot_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     examples = data["examples"]
     corpus = [ex["question"] for ex in examples]
@@ -71,8 +73,9 @@ def inject_schema(state: AgentState) -> dict:
     selected_tables = state["selected_tables"]
     schema_context  = []
 
-    with open ('schema.json','r') as file:
-        full_schema = json.load(file)
+    schema_path = os.path.join("data", "schema.json")
+    with open(schema_path, "r", encoding="utf-8") as f:        
+        full_schema = json.load(f)
     
     tables_schema = full_schema.get("tables", {})
     for table in selected_tables:
